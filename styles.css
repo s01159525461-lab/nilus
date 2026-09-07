@@ -1,5 +1,5 @@
 /* ===================================================================
-   قوافل — Design tokens
+   Design tokens
 =================================================================== */
 :root {
   --night:      #0d0d0d;
@@ -92,7 +92,7 @@ p { margin: 0; }
 .btn-text:hover { color: var(--gold); }
 
 /* ===================================================================
-   Header / Nav (مُصغّر ومُعدّل)
+   Header / Nav
 =================================================================== */
 .site-header {
   position: fixed;
@@ -161,7 +161,7 @@ p { margin: 0; }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 /* ===================================================================
-   Hero Section (عرض صورة واحدة فقط بدون تكرار)
+   Hero Section
 =================================================================== */
 .hero {
   position: relative;
@@ -204,16 +204,14 @@ p { margin: 0; }
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr; /* كارت الأرقام شمال والمحتوى يمين */
+  grid-template-columns: 1.15fr 0.85fr;
   gap: 40px;
   align-items: center;
   width: 100%;
 }
 
-/* الكلام والنصوص على اليمين */
-.hero-content {
-  order: 2;
-  text-align: right;
+.hero-copy {
+  text-align: start;
 }
 
 .eyebrow-line {
@@ -242,9 +240,7 @@ p { margin: 0; }
   margin-top: 36px;
 }
 
-/* كارت الأرقام على الشمال */
 .hero-card {
-  order: 1;
   background: rgba(20, 20, 20, 0.55);
   border: 1px solid var(--line-dark);
   backdrop-filter: blur(10px);
@@ -403,7 +399,7 @@ section { padding: 100px 0; }
   font-size: .95rem;
   transition: opacity .3s var(--ease), border-color .3s var(--ease);
 }
-.progress-track li span {
+.progress-track li span:first-child {
   width: 30px; height: 30px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -413,8 +409,8 @@ section { padding: 100px 0; }
 }
 .progress-track li.active,
 .progress-track li.done { opacity: 1; border-inline-start-color: var(--gold); color: var(--gold); }
-.progress-track li.active span,
-.progress-track li.done span { border-color: var(--gold); background: var(--gold); color: var(--night); }
+.progress-track li.active span:first-child,
+.progress-track li.done span:first-child { border-color: var(--gold); background: var(--gold); color: var(--night); }
 
 .booking-panel {
   background: var(--night-2);
@@ -519,7 +515,7 @@ section { padding: 100px 0; }
 .summary-list { display: flex; flex-direction: column; gap: 9px; margin: 0; }
 .summary-list div { display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; }
 .summary-list dt { color: var(--sand-2); }
-.summary-list dd { margin: 0; font-weight: 600; color: var(--ink); text-align: left; }
+.summary-list dd { margin: 0; font-weight: 600; color: var(--ink); text-align: start; }
 
 .field-error { color: #ff5555; font-size: .88rem; min-height: 1.2em; margin-top: 6px; }
 
@@ -678,8 +674,6 @@ section { padding: 100px 0; }
   color: var(--sand-2);
   opacity: .75;
 }
-.admin-link { opacity: .7; }
-.admin-link:hover { opacity: 1; color: var(--gold); }
 
 /* ===================================================================
    Responsive & LTR
@@ -690,6 +684,8 @@ html[dir="ltr"] {
 }
 html[dir="ltr"] .hero-card-list li { text-align: left; }
 html[dir="ltr"] .eyebrow-line span { margin-right: 8px; margin-left: 0; }
+html[dir="ltr"] .btn-next span[aria-hidden="true"] { display: inline-block; transform: rotate(180deg); }
+html[dir="ltr"] .btn-prev span[aria-hidden="true"] { display: inline-block; transform: rotate(180deg); }
 
 @media (max-width: 980px) {
   .main-nav, .nav-cta { display: none; }
@@ -713,7 +709,7 @@ html[dir="ltr"] .eyebrow-line span { margin-right: 8px; margin-left: 0; }
 
   .hero-grid { grid-template-columns: 1fr; }
   .hero-card { order: 2; }
-  .hero-content { order: 1; text-align: center; }
+  .hero-copy { order: 1; text-align: center; }
   .eyebrow-line { justify-content: center; }
 
   .dest-row { grid-template-columns: repeat(2,1fr); }
