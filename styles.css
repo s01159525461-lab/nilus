@@ -225,7 +225,7 @@ p { margin: 0; }
 
 .hero-title {
   font-size: clamp(2.4rem, 5vw, 3.75rem);
-  color: #ffffff;
+  color: #000;
 }
 
 .hero-sub {
