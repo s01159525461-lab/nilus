@@ -421,34 +421,72 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeModal = document.getElementById("closeModal");
   const refNumber = document.getElementById("refNumber");
 
-  if (bookingForm) {
-    bookingForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const err4 = document.getElementById("err4");
-      if (err4) err4.textContent = "";
+  // if (bookingForm) {
+  //   bookingForm.addEventListener("submit", (e) => {
+  //     e.preventDefault();
+  //     const err4 = document.getElementById("err4");
+  //     if (err4) err4.textContent = "";
 
-      const name = document.getElementById("fullName").value.trim();
-      const phone = document.getElementById("phone").value.trim();
+  //     const name = document.getElementById("fullName").value.trim();
+  //     const phone = document.getElementById("phone").value.trim();
 
-      if (!name || !phone) {
-        if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
-        return;
-      }
+  //     if (!name || !phone) {
+  //       if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
+  //       return;
+  //     }
 
-      const randomRef = "NPS-" + Math.floor(100000 + Math.random() * 900000);
-      if (refNumber) refNumber.textContent = randomRef;
+  //     const randomRef = "NPS-" + Math.floor(100000 + Math.random() * 900000);
+  //     if (refNumber) refNumber.textContent = randomRef;
+  //     if (successModal) successModal.removeAttribute("hidden");
+  //   });
+  // }
+
+  // if (closeModal) {
+  //   closeModal.addEventListener("click", () => {
+  //     if (successModal) successModal.setAttribute("hidden", "true");
+  //     bookingForm.reset();
+  //     goToStep(1);
+  //   });
+  // }
+if (bookingForm) {
+  bookingForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err4 = document.getElementById("err4");
+    if (err4) err4.textContent = "";
+
+    const name = document.getElementById("fullName").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (!name || !phone) {
+      if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
+      return;
+    }
+
+    // تجميع بيانات الحجز
+    const checkedActs = Array.from(document.querySelectorAll('input[name="activities"]:checked')).map(cb => cb.value);
+    const bookingData = {
+      destination: document.getElementById("destination").value,
+      startDate: document.getElementById("startDate").value,
+      days: document.getElementById("days").value,
+      people: document.getElementById("people").value,
+      activities: checkedActs,
+      notes: document.getElementById("notes") ? document.getElementById("notes").value : "",
+      fullName: name,
+      phone: phone,
+      email: document.getElementById("email") ? document.getElementById("email").value : ""
+    };
+
+    // إرسال البيانات لقاعدة البيانات عبر db.js
+    const savedBooking = await QawafelDB.addBooking(bookingData);
+
+    if (savedBooking) {
+      if (refNumber) refNumber.textContent = savedBooking.id;
       if (successModal) successModal.removeAttribute("hidden");
-    });
-  }
-
-  if (closeModal) {
-    closeModal.addEventListener("click", () => {
-      if (successModal) successModal.setAttribute("hidden", "true");
-      bookingForm.reset();
-      goToStep(1);
-    });
-  }
-
+    } else {
+      if (err4) err4.textContent = "حدث خطأ أثناء حفظ الحجز، حاول مرة أخرى.";
+    }
+  });
+}
   /* ==========================================
      7. Testimonials Slider
   ========================================== */
@@ -473,4 +511,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set Copyright Year
   const yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+});
+document.getElementById("saveStatusBtn").addEventListener("click", async () => {
+  if (!openBookingId) return;
+  await QawafelDB.updateBooking(openBookingId, { status: statusSelect.value });
+  detailModal.hidden = true;
+  await renderAll();
+});
+
+document.getElementById("deleteBookingBtn").addEventListener("click", async () => {
+  if (!openBookingId) return;
+  if (confirm("متأكد إنك عاوز تحذف الحجز ده؟")) {
+    await QawafelDB.deleteBooking(openBookingId);
+    detailModal.hidden = true;
+    await renderAll();
+  }
 });

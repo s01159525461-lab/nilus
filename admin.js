@@ -217,3 +217,16 @@
     }
   });
 })();
+async function renderAll() {
+  const all = await QawafelDB.getAllBookings();
+  renderStats(all);
+  populateDestinationFilter(all);
+  renderTable(applyFilters(all));
+}
+async function openDetail(id) {
+  const b = await QawafelDB.getBookingById(id);
+  if (!b) return;
+  openBookingId = id;
+
+  // باقي الكود كما هو...
+}
