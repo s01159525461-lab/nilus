@@ -1,44 +1,60 @@
 (function () {
   "use strict";
 
-  /* ============================ Login gate ============================ */
+  /* ============================ Login gate (Supabase Auth) ============================ */
   const loginScreen = document.getElementById("loginScreen");
   const adminApp = document.getElementById("adminApp");
   const loginForm = document.getElementById("loginForm");
   const loginError = document.getElementById("loginError");
-  const SESSION_KEY = "qawafel_admin_session";
 
-  function enterApp() {
+  async function enterApp() {
     loginScreen.hidden = true;
     adminApp.hidden = false;
-    renderAll();
+    await renderAll();
   }
 
-  if (sessionStorage.getItem(SESSION_KEY) === "1") {
-    enterApp();
-  }
-
-  loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const value = document.getElementById("loginPassword").value;
-    if (value === QawafelDB.getAdminPassword()) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      loginError.textContent = "";
-      enterApp();
-    } else {
-      loginError.textContent = "كلمة السر غلط، جرب تاني.";
-    }
-  });
-
-  document.getElementById("logoutBtn").addEventListener("click", () => {
-    sessionStorage.removeItem(SESSION_KEY);
+  function showLogin() {
     adminApp.hidden = true;
     loginScreen.hidden = false;
+  }
+
+  // لو فيه جلسة دخول شغالة بالفعل (من قبل)، ادخل على طول من غير ما تطلب تسجيل دخول تاني
+  (async function checkExistingSession() {
+    const { data } = await supabaseClient.auth.getSession();
+    if (data && data.session) {
+      enterApp();
+    }
+  })();
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    loginError.textContent = "";
+
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    if (submitBtn) submitBtn.disabled = false;
+
+    if (error) {
+      loginError.textContent = "الإيميل أو كلمة السر غلط، جرب تاني.";
+      return;
+    }
+    enterApp();
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    showLogin();
   });
 
   /* ============================ State ============================ */
   let currentFilters = { search: "", status: "", destination: "" };
   let openBookingId = null;
+  let cachedBookings = [];
 
   const tbody = document.getElementById("bookingsBody");
   const emptyState = document.getElementById("emptyState");
@@ -50,11 +66,11 @@
     return "pending";
   }
 
-  function renderAll() {
-    const all = QawafelDB.getAllBookings();
-    renderStats(all);
-    populateDestinationFilter(all);
-    renderTable(applyFilters(all));
+  async function renderAll() {
+    cachedBookings = await QawafelDB.getAllBookings();
+    renderStats(cachedBookings);
+    populateDestinationFilter(cachedBookings);
+    renderTable(applyFilters(cachedBookings));
   }
 
   function renderStats(all) {
@@ -121,15 +137,15 @@
   /* ============================ Filters ============================ */
   document.getElementById("searchInput").addEventListener("input", (e) => {
     currentFilters.search = e.target.value;
-    renderTable(applyFilters(QawafelDB.getAllBookings()));
+    renderTable(applyFilters(cachedBookings));
   });
   document.getElementById("filterStatus").addEventListener("change", (e) => {
     currentFilters.status = e.target.value;
-    renderTable(applyFilters(QawafelDB.getAllBookings()));
+    renderTable(applyFilters(cachedBookings));
   });
   filterDestination.addEventListener("change", (e) => {
     currentFilters.destination = e.target.value;
-    renderTable(applyFilters(QawafelDB.getAllBookings()));
+    renderTable(applyFilters(cachedBookings));
   });
 
   /* ============================ Detail modal ============================ */
@@ -144,7 +160,7 @@
   });
 
   function openDetail(id) {
-    const b = QawafelDB.getBookingById(id);
+    const b = cachedBookings.find((x) => x.id === id);
     if (!b) return;
     openBookingId = id;
 
@@ -159,7 +175,7 @@
       ["عدد الأشخاص", `${b.people} شخص`],
       ["الأنشطة", b.activities.length ? b.activities.join("، ") : "—"],
       ["ملاحظات", b.notes || "—"],
-      ["تاريخ الطلب", new Date(b.createdAt).toLocaleString("ar-EG")],
+      ["تاريخ الطلب", b.createdAt ? new Date(b.createdAt).toLocaleString("ar-EG") : "—"],
     ];
     detailList.innerHTML = rows
       .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`)
@@ -173,19 +189,22 @@
     if (e.target.id === "detailModal") detailModal.hidden = true;
   });
 
-  document.getElementById("saveStatusBtn").addEventListener("click", () => {
+  document.getElementById("saveStatusBtn").addEventListener("click", async () => {
     if (!openBookingId) return;
-    QawafelDB.updateBooking(openBookingId, { status: statusSelect.value });
+    const btn = document.getElementById("saveStatusBtn");
+    btn.disabled = true;
+    await QawafelDB.updateBooking(openBookingId, { status: statusSelect.value });
+    btn.disabled = false;
     detailModal.hidden = true;
-    renderAll();
+    await renderAll();
   });
 
-  document.getElementById("deleteBookingBtn").addEventListener("click", () => {
+  document.getElementById("deleteBookingBtn").addEventListener("click", async () => {
     if (!openBookingId) return;
     if (confirm("متأكد إنك عاوز تحذف الحجز ده؟")) {
-      QawafelDB.deleteBooking(openBookingId);
+      await QawafelDB.deleteBooking(openBookingId);
       detailModal.hidden = true;
-      renderAll();
+      await renderAll();
     }
   });
 
@@ -200,33 +219,26 @@
     URL.revokeObjectURL(url);
   }
 
-  document.getElementById("exportCsvBtn").addEventListener("click", () => {
-    const csv = QawafelDB.exportAsCSV();
-    if (!csv) return alert("مفيش بيانات عشان تتصدر.");
-    downloadFile("qawafel-bookings.csv", "\uFEFF" + csv, "text/csv;charset=utf-8;");
-  });
+  const exportCsvBtn = document.getElementById("exportCsvBtn");
+  if (exportCsvBtn) {
+    exportCsvBtn.addEventListener("click", () => {
+      const csv = QawafelDB.exportAsCSV(cachedBookings);
+      if (!csv) return alert("مفيش بيانات عشان تتصدر.");
+      downloadFile("qawafel-bookings.csv", "\uFEFF" + csv, "text/csv;charset=utf-8;");
+    });
+  }
 
-  document.getElementById("exportJsonBtn").addEventListener("click", () => {
-    downloadFile("qawafel-bookings.json", QawafelDB.exportAsJSON(), "application/json");
-  });
+  const exportJsonBtn = document.getElementById("exportJsonBtn");
+  if (exportJsonBtn) {
+    exportJsonBtn.addEventListener("click", () => {
+      downloadFile("qawafel-bookings.json", QawafelDB.exportAsJSON(cachedBookings), "application/json");
+    });
+  }
 
-  document.getElementById("clearAllBtn").addEventListener("click", () => {
+  document.getElementById("clearAllBtn").addEventListener("click", async () => {
     if (confirm("هيتم حذف كل الحجوزات نهائيًا. متأكد؟")) {
-      QawafelDB.clearAll();
-      renderAll();
+      await QawafelDB.clearAll();
+      await renderAll();
     }
   });
 })();
-async function renderAll() {
-  const all = await QawafelDB.getAllBookings();
-  renderStats(all);
-  populateDestinationFilter(all);
-  renderTable(applyFilters(all));
-}
-async function openDetail(id) {
-  const b = await QawafelDB.getBookingById(id);
-  if (!b) return;
-  openBookingId = id;
-
-  // باقي الكود كما هو...
-}

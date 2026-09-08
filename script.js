@@ -260,24 +260,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const langToggleBtn = document.getElementById("lang-toggle");
   const langText = document.getElementById("lang-text");
 
-  langToggleBtn.addEventListener("click", () => {
-    currentLang = currentLang === "ar" ? "en" : "ar";
-    
-    // Switch document direction & lang attribute
-    document.documentElement.setAttribute("dir", currentLang === "ar" ? "rtl" : "ltr");
-    document.documentElement.setAttribute("lang", currentLang);
+  if (langToggleBtn) {
+    langToggleBtn.addEventListener("click", () => {
+      currentLang = currentLang === "ar" ? "en" : "ar";
+      
+      document.documentElement.setAttribute("dir", currentLang === "ar" ? "rtl" : "ltr");
+      document.documentElement.setAttribute("lang", currentLang);
 
-    // Update all elements with data-i18n
-    document.querySelectorAll("[data-i18n]").forEach(el => {
-      const key = el.getAttribute("data-i18n");
-      if (translations[currentLang][key]) {
-        el.innerHTML = translations[currentLang][key];
-      }
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (translations[currentLang][key]) {
+          el.innerHTML = translations[currentLang][key];
+        }
+      });
+
+      if (langText) langText.textContent = translations[currentLang].lang_btn;
+      updateSummary();
     });
-
-    langText.textContent = translations[currentLang].lang_btn;
-    updateSummary();
-  });
+  }
 
   /* ==========================================
      2. Header Scrolling & Mobile Navigation
@@ -286,14 +286,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const navToggle = document.getElementById("navToggle");
 
   window.addEventListener("scroll", () => {
-    if (window.scrollY > 40) {
-      header.classList.add("scrolled");
-    } else {
-      header.classList.remove("scrolled");
+    if (header) {
+      if (window.scrollY > 40) {
+        header.classList.add("scrolled");
+      } else {
+        header.classList.remove("scrolled");
+      }
     }
   });
 
-  if (navToggle) {
+  if (navToggle && header) {
     navToggle.addEventListener("click", () => {
       const expanded = navToggle.getAttribute("aria-expanded") === "true";
       navToggle.setAttribute("aria-expanded", !expanded);
@@ -347,8 +349,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (err1) err1.textContent = "";
 
     if (step === 1) {
-      const dest = document.getElementById("destination").value;
-      const date = document.getElementById("startDate").value;
+      const dest = document.getElementById("destination") ? document.getElementById("destination").value : "";
+      const date = document.getElementById("startDate") ? document.getElementById("startDate").value : "";
       if (!dest || !date) {
         valid = false;
         if (err1) err1.textContent = currentLang === "ar" ? "برجاء اختار الوجهة وتاريخ بداية الرحلة." : "Please select a destination and start date.";
@@ -374,14 +376,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateVal(newVal) {
       if (newVal >= min && newVal <= max) {
         val = newVal;
-        output.textContent = val;
+        if (output) output.textContent = val;
         stepper.setAttribute("data-value", val);
         if (hiddenInput) hiddenInput.value = val;
       }
     }
 
-    decBtn.addEventListener("click", () => updateVal(val - 1));
-    incBtn.addEventListener("click", () => updateVal(val + 1));
+    if (decBtn) decBtn.addEventListener("click", () => updateVal(val - 1));
+    if (incBtn) incBtn.addEventListener("click", () => updateVal(val + 1));
   });
 
   /* ==========================================
@@ -392,14 +394,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!summaryList) return;
 
     const destSelect = document.getElementById("destination");
-    const destText = destSelect.options[destSelect.selectedIndex] ? destSelect.options[destSelect.selectedIndex].text : "-";
-    const startDate = document.getElementById("startDate").value || "-";
-    const days = document.getElementById("days").value;
-    const people = document.getElementById("people").value;
+    const destText = (destSelect && destSelect.options[destSelect.selectedIndex]) ? destSelect.options[destSelect.selectedIndex].text : "-";
+    const startDate = document.getElementById("startDate") ? document.getElementById("startDate").value : "-";
+    const days = document.getElementById("days") ? document.getElementById("days").value : "1";
+    const people = document.getElementById("people") ? document.getElementById("people").value : "1";
 
     const checkedActs = Array.from(document.querySelectorAll('input[name="activities"]:checked'))
       .map(cb => {
-        const span = cb.closest("label").querySelector("[data-i18n]");
+        const span = cb.closest("label") ? cb.closest("label").querySelector("[data-i18n]") : null;
         return span ? span.textContent : cb.value;
       });
 
@@ -415,78 +417,65 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ==========================================
-     6. Form Submission & Modal
+     6. Form Submission & Modal (Supabase Integrated)
   ========================================== */
   const successModal = document.getElementById("successModal");
   const closeModal = document.getElementById("closeModal");
   const refNumber = document.getElementById("refNumber");
 
-  // if (bookingForm) {
-  //   bookingForm.addEventListener("submit", (e) => {
-  //     e.preventDefault();
-  //     const err4 = document.getElementById("err4");
-  //     if (err4) err4.textContent = "";
+  if (bookingForm) {
+    bookingForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err4 = document.getElementById("err4");
+      if (err4) err4.textContent = "";
 
-  //     const name = document.getElementById("fullName").value.trim();
-  //     const phone = document.getElementById("phone").value.trim();
+      const nameInput = document.getElementById("fullName");
+      const phoneInput = document.getElementById("phone");
+      const name = nameInput ? nameInput.value.trim() : "";
+      const phone = phoneInput ? phoneInput.value.trim() : "";
 
-  //     if (!name || !phone) {
-  //       if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
-  //       return;
-  //     }
+      if (!name || !phone) {
+        if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
+        return;
+      }
 
-  //     const randomRef = "NPS-" + Math.floor(100000 + Math.random() * 900000);
-  //     if (refNumber) refNumber.textContent = randomRef;
-  //     if (successModal) successModal.removeAttribute("hidden");
-  //   });
-  // }
+      const checkedActs = Array.from(document.querySelectorAll('input[name="activities"]:checked')).map(cb => cb.value);
+      const bookingData = {
+        destination: document.getElementById("destination") ? document.getElementById("destination").value : "",
+        startDate: document.getElementById("startDate") ? document.getElementById("startDate").value : "",
+        days: document.getElementById("days") ? document.getElementById("days").value : 1,
+        people: document.getElementById("people") ? document.getElementById("people").value : 1,
+        activities: checkedActs,
+        notes: document.getElementById("notes") ? document.getElementById("notes").value : "",
+        fullName: name,
+        phone: phone,
+        email: document.getElementById("email") ? document.getElementById("email").value : ""
+      };
 
-  // if (closeModal) {
-  //   closeModal.addEventListener("click", () => {
-  //     if (successModal) successModal.setAttribute("hidden", "true");
-  //     bookingForm.reset();
-  //     goToStep(1);
-  //   });
-  // }
-if (bookingForm) {
-  bookingForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const err4 = document.getElementById("err4");
-    if (err4) err4.textContent = "";
+      const submitBtn = bookingForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
 
-    const name = document.getElementById("fullName").value.trim();
-    const phone = document.getElementById("phone").value.trim();
+      const savedBooking = await NilusDB.addBooking(bookingData);
 
-    if (!name || !phone) {
-      if (err4) err4.textContent = currentLang === "ar" ? "برجاء كتابة الاسم ورقم الموبايل." : "Please enter your name and phone number.";
-      return;
-    }
+      if (submitBtn) submitBtn.disabled = false;
 
-    // تجميع بيانات الحجز
-    const checkedActs = Array.from(document.querySelectorAll('input[name="activities"]:checked')).map(cb => cb.value);
-    const bookingData = {
-      destination: document.getElementById("destination").value,
-      startDate: document.getElementById("startDate").value,
-      days: document.getElementById("days").value,
-      people: document.getElementById("people").value,
-      activities: checkedActs,
-      notes: document.getElementById("notes") ? document.getElementById("notes").value : "",
-      fullName: name,
-      phone: phone,
-      email: document.getElementById("email") ? document.getElementById("email").value : ""
-    };
+      if (savedBooking) {
+        if (refNumber) refNumber.textContent = savedBooking.id;
+        if (successModal) successModal.removeAttribute("hidden");
+      } else {
+        if (err4) err4.textContent = "حدث خطأ أثناء حفظ الحجز، تأكد من اتصالك بالإنترنت وحاول مرة أخرى.";
+      }
+    });
+  }
 
-    // إرسال البيانات لقاعدة البيانات عبر db.js
-    const savedBooking = await QawafelDB.addBooking(bookingData);
+  if (closeModal) {
+    closeModal.addEventListener("click", () => {
+      if (successModal) successModal.setAttribute("hidden", "true");
+      if (bookingForm) bookingForm.reset();
+      goToStep(1);
+    });
+  }
 
-    if (savedBooking) {
-      if (refNumber) refNumber.textContent = savedBooking.id;
-      if (successModal) successModal.removeAttribute("hidden");
-    } else {
-      if (err4) err4.textContent = "حدث خطأ أثناء حفظ الحجز، حاول مرة أخرى.";
-    }
-  });
-}
   /* ==========================================
      7. Testimonials Slider
   ========================================== */
@@ -511,19 +500,4 @@ if (bookingForm) {
   // Set Copyright Year
   const yearEl = document.getElementById("year");
   if (yearEl) yearEl.textContent = new Date().getFullYear();
-});
-document.getElementById("saveStatusBtn").addEventListener("click", async () => {
-  if (!openBookingId) return;
-  await QawafelDB.updateBooking(openBookingId, { status: statusSelect.value });
-  detailModal.hidden = true;
-  await renderAll();
-});
-
-document.getElementById("deleteBookingBtn").addEventListener("click", async () => {
-  if (!openBookingId) return;
-  if (confirm("متأكد إنك عاوز تحذف الحجز ده؟")) {
-    await QawafelDB.deleteBooking(openBookingId);
-    detailModal.hidden = true;
-    await renderAll();
-  }
 });
